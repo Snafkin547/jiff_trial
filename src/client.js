@@ -55,6 +55,8 @@ function test (sums, averages, std){
   console.log([ 32, 16, 26, 24 ] , 'vs output:', sums)
   console.log([ 10.666666666666666, 5.333333333333333, 8.666666666666666, 8 ] , 'vs output:', averages)
   console.log([ 5.734883511361751, 2.8674417556808756, 6.649979114420002, 8.524474568362947 ] , 'vs output:', std)
+
+  getLRFormula()
 }
 
 // Worker code to run all sum, ave, and std methods as well as test code
@@ -78,13 +80,72 @@ async function beer_Vote(inputs){
 }
 
 
-const { sdiv } = require('../../web-mpc/jiff/lib/client/protocols/bits/arithmetic.js');
-const JIFFClient = require('../../web-mpc/jiff/lib/jiff-client.js');
-const options = { party_count: 3, crypto_provider: true, onConnect: onConnect };
-const jiffClient = new JIFFClient('http://localhost:8112', 'our-setup-application', options);
+// const { sdiv } = require('../../web-mpc/jiff/lib/client/protocols/bits/arithmetic.js');
+// const JIFFClient = require('../../web-mpc/jiff/lib/jiff-client.js');
+// const options = { party_count: 3, crypto_provider: true, onConnect: onConnect };
+// const jiffClient = new JIFFClient('http://localhost:8112', 'our-setup-application', options);
 
-const inputs = {1:[10,5,3,1], 2:[18,2,5,3], 3:[4,9,18,20]};
-jiffClient.wait_for([1,2,3], ()=>beer_Vote(inputs));
+// const inputs = {1:[10,5,3,1], 2:[18,2,5,3], 3:[4,9,18,20]};
+// jiffClient.wait_for([1,2,3], ()=>beer_Vote(inputs));
+
+class LinearRegression{
+  constructor(x, y){
+    this.X_input=x;
+    this.Y_input=y;
+    this.n_party=4;
+    this.sumX = this.sumAll(x);
+    this.sumY = this.sumAll(y);
+    this.sumProdXY= this.multiplySum(x, y);
+    this.sumPowX= this.powerSum(x);
+    this.sumPowY= this.powerSum(x);
+    this.intercept= this.getIntercept();    
+    this.denominator;
+    this.slope= this.getSlope();
+  };
+
+  sumAll(input){
+    return input.reduce((a, b) => a + b, 0);
+  };
+  multiplySum(X_input,Y_input){
+    console.log('hello world mult');
+    var res=0;
+    for(let i=0; i<X_input.length;i++){
+      res+=X_input[i]*Y_input[i]
+    }
+    return res;
+  };
+  powerSum(input){
+    var sqr = [];
+    var p = 2;
+    for (let i = 0; i < input.length; i++) {    
+        sqr.push(Math.pow(input[i],p));    
+    }
+    console.log(this.sumAll(sqr));
+    return this.sumAll(sqr);
+  };
+  
+  getIntercept(){
+    var numerator = this.sumY*this.sumPowX - this.sumX*this.sumProdXY;
+    this.denominator = this.n_party*this.sumPowX-this.sumX*this.sumX;
+    return numerator/this.denominator;
+  }
+
+  getSlope(){
+    var numerator = this.n_party*this.sumProdXY - this.sumX*this.sumY;
+    return numerator/this.denominator;
+  };
+  
+  getLRFormula(){
+    console.log('slope: ', this.slope, ' intercept: ', this.intercept)
+  }
+
+}
+
+const X_input = [1,2,3,4]
+const Y_input = [3,5,7,9]
+
+lr = new LinearRegression(X_input,Y_input);
+lr.getLRFormula();
 
 
 //Refactor
