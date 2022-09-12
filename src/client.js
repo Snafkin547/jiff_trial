@@ -75,7 +75,6 @@ function onConnect() {
   
   // Sum X/Y values from all parties
   async function sum_AllShare(input, n_party, idx){
-      console.log('hello world Sum');
       try{
         if(input.length<2) throw "empty";
       }
@@ -111,7 +110,6 @@ function onConnect() {
   
   // Sum multiplied value of X and Y from all parties
   async function multiplySum(input, n_party, idx1, idx2){
-    console.log('hello world mult');
     var mul_arr=[];
     for (let i =1; i<=n_party; i++){
       const x1 = await input[i][idx1];
@@ -214,23 +212,23 @@ function onConnect() {
     };
     
     async predict(x1, x2){
-      // var res = await x1.cmult(this.slope1).sadd(x2.cmult(this.slope2)).cadd(this.intercept);
-      
+      console.log('slope1', this.slope1, 'slope2', this.slope2, 'intercept', this.intercept);
+
       const first = await x1.cmult(this.slope1);
       const first_opened= await first.open()
       const x1_opened= await x1.open()
-      console.log('x1', x1_opened.toString(), 'slope1', this.slope1, 'first', first_opened.toString())
-
+      
       const second = await x2.cmult(this.slope2);
       const second_opened= await second.open()
       const x2_opened= await x2.open()
-      console.log('x2', x2_opened.toString(), 'slope2', this.slope2, 'second', second_opened.toString())
+      
+      console.log('x1', x1_opened.toString(), 'x2', x2_opened.toString)
+      console.log('first', first_opened.toString(), 'second', second_opened.toString(), 'intercept', this.intercept);
       
       var res = await first.sadd(second);
       res = await res.cadd(this.intercept);
       const res_opened = await res.open()
       console.log('predicted value: ', res_opened.toString())
-      // const res = await x1.cmult(this.slope1).sadd(x2.cmult(this.slope2)).cadd(this.intercept);
       return res;
     }
   
@@ -269,12 +267,12 @@ function onConnect() {
       var pred = await this.model.predict(input[1][x1_idx], input[1][x2_idx]);
 
       var regSS = await this.computeRegMS(pred);
-      var regSS_open = await regSS.open();
-      console.log('regSS 1: ', regSS_open.toString())
+      // var regSS_open = await regSS.open();
+      // console.log('regSS 1: ', regSS_open.toString())
 
       var resSS = await this.computeResMS(input[1][y_idx],pred)
-      var resSS_open =  await resSS.open();
-      console.log('resSS 1: ', resSS_open.toString())
+      // var resSS_open =  await resSS.open();
+      // console.log('resSS 1: ', resSS_open.toString())
 
        for(let i=2; i<=n_party;i++){
        
@@ -354,9 +352,9 @@ function onConnect() {
     // var slope1 = 3.147893102683522;
     // var slope2= -1.6561432690175206;
     // var intercept =  -6.867487247726768;
-    slope1=parseFloat(slope1.toFixed(3));
-    slope2=parseFloat(slope2.toFixed(3));
-    intercept=parseFloat(intercept.toFixed(3));
+    slope1=parseFloat(slope1.toFixed(5));
+    slope2=parseFloat(slope2.toFixed(5));
+    intercept=parseFloat(intercept.toFixed(5));
     
     LR_model = new MultipleLinearRegression(slope1, slope2, intercept);
     reg_df=2;
@@ -384,55 +382,36 @@ function onConnect() {
   const JIFFClient = require('../../web-mpc/jiff/lib/jiff-client.js');
   var BigNumber = require('../../web-mpc/jiff/node_modules/bignumber.js/bignumber.js');
   
+  const jiff_bignumber = require('../../web-mpc/jiff/lib/ext/jiff-client-bignumber');
+  const jiff_fixedpoint = require('../../web-mpc/jiff/lib/ext/jiff-client-fixedpoint');
+  const jiff_negativenumber = require('../../web-mpc/jiff/lib/ext/jiff-client-negativenumber');
+  
+  const options = { party_count: 1, crypto_provider: true, onConnect: onConnect };
+  const jiffClient = new JIFFClient('http://localhost:8112', 'our-setup-application', options);
+  jiffClient.apply_extension(jiff_bignumber, options);
+  jiffClient.apply_extension(jiff_fixedpoint, options);
+  jiffClient.apply_extension(jiff_negativenumber, options);
+
+
   if(modelType==0){ ///Multiple Linear Regression Model
-    const jiff_bignumber = require('../../web-mpc/jiff/lib/ext/jiff-client-bignumber');
-    const jiff_fixedpoint = require('../../web-mpc/jiff/lib/ext/jiff-client-fixedpoint');
-    const jiff_negativenumber = require('../../web-mpc/jiff/lib/ext/jiff-client-negativenumber');
-
-    const options = { party_count: 8, crypto_provider: true, onConnect: onConnect,Zp: new BigNumber(52416982763) };
-    const jiffClient = new JIFFClient('http://localhost:8112', 'our-setup-application', options);
-    jiffClient.apply_extension(jiff_bignumber, options);
-    jiffClient.apply_extension(jiff_fixedpoint, options); 
-    jiffClient.apply_extension(jiff_negativenumber, options);
-
+    jiffClient.party_count=8;
+    jiffClient.Zp = new BigNumber(52416982763);
     const inputs_MLR = {1:[60,22,140], 2:[62,25,155], 3:[67,24,159], 4:[70,20,179], 5:[71,15,192], 6:[72,14,200], 7:[75,14,212], 8:[78,11,215]};
     jiffClient.wait_for([1,2,3,4,5,6,7,8], ()=>Run_TwoMultipleLinearRegression(inputs_MLR, jiffClient));
-    
 
   } else if(modelType==1){ ///Simple Linear Regression Model
-  
-    const jiff_bignumber = require('../../web-mpc/jiff/lib/ext/jiff-client-bignumber');
-    const jiff_fixedpoint = require('../../web-mpc/jiff/lib/ext/jiff-client-fixedpoint');
-    const jiff_negativenumber = require('../../web-mpc/jiff/lib/ext/jiff-client-negativenumber');
-    
-    const options = { party_count: 3, crypto_provider: true, onConnect: onConnect };
-    const jiffClient = new JIFFClient('http://localhost:8112', 'our-setup-application', options);
-    jiffClient.apply_extension(jiff_bignumber, options);
-    jiffClient.apply_extension(jiff_fixedpoint, options);
-    jiffClient.apply_extension(jiff_negativenumber, options);
-        
+    jiffClient.party_count=3;
     const inputs_SLR = {1:[1,2], 2:[2,4], 3:[3,6]};
     jiffClient.wait_for([1,2,3], ()=>Run_SimpleLinearRegression(inputs_SLR, jiffClient));
     
   
   } else if(modelType==2){ ///Temporary Experiment
-    
-    const jiff_bignumber = require('../../web-mpc/jiff/lib/ext/jiff-client-bignumber');
-    const jiff_fixedpoint = require('../../web-mpc/jiff/lib/ext/jiff-client-fixedpoint');
-    const jiff_negativenumber = require('../../web-mpc/jiff/lib/ext/jiff-client-negativenumber');
-    
-    const options = { party_count: 2, crypto_provider: true, onConnect: onConnect,Zp: new BigNumber(32416190071) };
-    const jiffClient = new JIFFClient('http://localhost:8112', 'our-setup-application', options);
-    jiffClient.apply_extension(jiff_bignumber, options);
-    jiffClient.apply_extension(jiff_fixedpoint, options);
-    jiffClient.apply_extension(jiff_negativenumber, options);
+    jiffClient.party_count=2;
     for(let x=60; x<61 ;x++){
       const inputs={1:60,2:x};
       jiffClient.wait_for([1,2], ()=>temp_runner(inputs, jiffClient));
   
     }
-
-
   }
   else if(modelType==3){ ///Voting Method
     const options = { party_count: 3, crypto_provider: true, onConnect: onConnect };
